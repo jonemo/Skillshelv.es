@@ -1,0 +1,5 @@
+# GAE compiles your Python:
+.pyc
+
+# this file currently still contains passwords:
+sillshelves.py
