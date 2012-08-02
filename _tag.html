@@ -1,0 +1,116 @@
+<h1>{{requestedtagdisplay}}</h1>
+
+<div id="tagpage_loading" class="loading">
+	<img src="/images/loading.gif" /> 
+	<p>Loading list of books for this skill from Fluidinfo...</p>
+</div>
+
+
+
+<div id="tagpage_content"></div>
+
+
+<script type="text/javascript">
+
+$(document).ready(function () {
+
+	checkIfJSONPLoaded = function ()
+	{
+		if ($('#receivedJSONP').attr('title') != 'jo')
+		{
+			$('#tagpage_loading').append('<p>This is taking longer than expected. This could either be because there are a lot of books for this skill, or because something is technically wrong. If this error persists, please check <a href="https://twitter.com/#!/fluidinfo">Fluidinfo\'s Twitter channel</a> for status reports and/or <a href="/_feedback">send me a message</a>.</p>');
+		}
+	};
+
+
+	receiveJSONP = function (content)
+	{
+		$('#receivedJSONP').attr('title', 'jo');
+		$('#tagpage_loading').remove();
+		var tagpage_content = $('#tagpage_content');
+	
+		for (var k=10; k<31; k=k+10)
+		{
+			var booklist;
+			if (k==10) 
+			{
+				tagpage_content.append('<h2>Beginner Level</h2><div id="booklist_beginner" class="booklist">');
+				booklist = $('#booklist_beginner');
+			} 
+			else if (k==20) 
+			{
+				tagpage_content.append('<h2>Intermediate Level</h2><div id="booklist_intermediate" class="booklist">');
+				booklist = $('#booklist_intermediate');
+			}
+			else if (k==30) 
+			{
+				tagpage_content.append('<h2>Expert Level</h2><div id="booklist_expert" class="booklist">');
+				booklist = $('#booklist_expert');
+			}
+			
+			for (var c in content.results.id)
+			{
+				// if this book doesn't even have this skill, we should never get it, but checking is better than trusting
+				if (! content.results.id[c]['skillshelves/skills/{{requestedtag}}'].value) { continue; }
+				// this is how we order by skill level beginner->intermediate->expert
+				if (content.results.id[c]['skillshelves/skills/{{requestedtag}}'].value != k) { continue; }
+				
+				var bookid = content.results.id[c]['oreilly.com/id'].value;
+				var authors = '';
+				for (var i=0; i<content.results.id[c]['oreilly.com/author-names'].value.length; i++)
+				{
+					if (authors != '') authors = authors + ', ';
+					authors = authors + content.results.id[c]['oreilly.com/author-names'].value[i];
+				}
+				
+				// figure out which skills are attached to this book
+				var skills = '';
+				for (var t in content.results.id[c])
+				{
+					if (t.search('skillshelves/skills/') != -1)
+					{
+						// 0. determine level
+						var tagname = t.substr(20);
+						var skillname = '';
+						if (skillshelves_tag_list[tagname]) skillname = skillshelves_tag_list[tagname];
+						var skillvalue = content.results.id[c][t].value;
+
+						var level = 'Beginner Level';
+						if (skillvalue >= 20) level = 'Intermediate Level';
+						else if (skillvalue >= 30) level = 'Expert Level';
+						
+						// 1. build a string that includes all the skills
+						if (skills != '') skills = skills + ', ';
+						skills = skills + '<span>' + skillname + ' (' + level + ')</span>';
+					}
+				}
+				if (skills == '') skills = '<em>No skills assigned yet.</em>';
+				
+				booklist.append('<div><a  class="bubble" title="<b>' + content.results.id[c]['oreilly.com/title'].value + '</b><br />by ' + authors + '<br /><br />Skills: ' + skills + '" href="/_book?b=' + content.results.id[c]['oreilly.com/id'].value + '"><img src="' + content.results.id[c]['oreilly.com/cover-small'].value + '" alt="' + content.results.id[c]['oreilly.com/title'].value + '" id="userpage_book_link_' + content.results.id[c]['oreilly.com/id'].value + '" class="bubble" /></a></div>');
+				// add popup bubble with brief info about book
+				/*
+				$('#userpage_book_link_' + content.results.id[c]['oreilly.com/id'].value).CreateBubblePopup({position : 'top',
+					align	 : 'center',
+					innerHtml : '<b>' + content.results.id[c]['oreilly.com/title'].value + '</b><br />by ' + authors + '<br /><br />Skills: ' + skills,
+					innerHtmlStyle: {color:'#FFFFFF', 'text-align':'left'},
+					themeName: 	'all-black',
+					themePath: 	'/static/jquerybubblepopup-theme'
+				});
+				*/
+			}
+
+			if (booklist.html() == '')
+			{
+				booklist.append('<em>No books at this level yet.</em>');
+			}
+			
+			tagpage_content.append('<br clear="all" /></div>');
+		}
+		
+		$('.bubble').qtip({position:'top center', style: {classes: 'ui-tooltip-shadow'}});
+	};
+		
+	$('body').append('<script src="http://fluiddb.fluidinfo.com/values?query=has skillshelves/skills/{{requestedtag}}&tag=oreilly.com/title&tag=oreilly.com/author-names&tag=oreilly.com/cover-small&tag=oreilly.com/publication-year&tag=oreilly.com/homepage&tag=oreilly.com/id&tag=oreilly.com/author-names&tag=oreilly.com/author-urls&tag=oreilly.com/summary{{ taglistasurlparams|safe }}&callback=receiveJSONP"></' + 'script>');
+	setTimeout(checkIfJSONPLoaded, 10000);
+});
+</script>

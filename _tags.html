@@ -1,0 +1,9 @@
+<h1>Skill List</h1>
+
+<p>This is the list of skills that books have been tagged with on {{skillshelves_logo|safe}}. Click any skill to see the books that have been tagged with it. The list is by no means perfect and I invite you to <a href="/_feedback">propose new skills or correct wrongly tagged books by submitting feedback</a>.</p>
+
+<ul>
+{% for item in tag_list %}
+	<li><a href="/_tag?t={{ item.tag }}">{{ item.display }}</a></li>
+{% endfor %}
+</ul>

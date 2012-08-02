@@ -1,0 +1,92 @@
+<script type="text/javascript">
+
+
+function alphaNumericCheck(pwd){
+	var regex=/^[0-9A-Za-z]+$/; //^[a-zA-z]+$/
+	if(regex.test(pwd)){
+		return true;
+	} else {
+		return false;
+	}
+}
+
+$(document).ready(function () {
+
+	var globalVariable = false; // keeps track of whether the user clicked the submit button or if that ajax return function dude did it.
+	
+	validateUsername = function () {
+		if (globalVariable)
+		{
+			// the return function of the ajax call below deemed everything ok, therefore we actually submit now
+			return true;
+		}
+	
+		var username = $('#reg_form_username').val();
+		var errtext = '';
+		
+		if (username.length < 2)
+		{
+			errtext = 'Three characters or more please!'
+		}
+		else if (! alphaNumericCheck(username))
+		{
+			errtext = 'Characters and numbers only please!';
+		}
+		
+		if (errtext != '')
+		{
+			$('#reg_form_username_label_above>.error').remove();
+			$('#reg_form_username_label_above').append('<span class="error"><br />' + errtext + '</span>')
+			return false;
+		}
+		
+		$.get("/json/usernamefree?u=" + username, function(data){
+			if (data != 'jo')
+			{
+				$('#reg_form_username_label_above>.error').remove();
+				$('#reg_form_username_label_above').append('<span class="error"><br />Sorry, that name is already taken.</span>')
+				return false;			
+			}
+			else
+			{
+				globalVariable = true;
+				$('#reg_form').submit();
+			}
+		});
+		
+		return false;	// we return false here, but we might submit the form in one second
+	}
+});
+
+</script>
+
+
+<div class="text">
+	<h1>Hello, welcome to {{skillshelves_logo|safe}}</h1>
+	
+	<br clear="both" />
+
+	<p style="margin-top:50px">Looks like this is your first time here. Let's build a shelf for your books! Don't worry, IKEA instructions are rocket science compared to this.</p>
+
+	<form action="/_register" method="post" id="reg_form" onsubmit="return validateUsername();">
+		<p>
+			<label for="reg_form_username" id="reg_form_username_label_above" class="above">Pick a name for your Skillshelf <em>(required)</em></label>
+			<input type="text" class="text" name="username" id="reg_form_username" value="{{suggestedusername}}" />
+			<label for="reg_form_username" class="below">Your skillshelf will be publicly available under the URL http://www.skillshelv.es/<em>USERNAME</em>.</label>
+		</p>
+		
+		<p>
+			<label for="reg_form_email" class="above">Your email adress</label>
+			<input type="text" class="text" name="email" id="reg_form_email" value="{{user_email}}" />
+			<label for="reg_form_email" class="below">We will only use this when you have trouble logging in. If you ever find yourself unable to login through your OpenID provider of choice, we'll send you a recovery code by email. Just leave this field blank if you don't want to give us your email but don't come crying if you can't log in.</label>
+		</p>
+		
+		<p class="submitbuttoncontainer">
+			<input class="uibutton large special" type="submit" value="Finish">
+		</p>
+	</form>
+</div>
+
+<div class="illustration">
+	<img src="/images/billy.png" />
+</div>

@@ -1,0 +1,153 @@
+
+<script type="text/javascript" src="/static/booklistjson.js"></script>
+<script type="text/javascript">
+
+function addslashes (str) {
+    return (str + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0');
+}
+
+removeBookFromSkillshelf = function (c, bookid) 
+{
+	$.get("/json/deletebookfromuser?o=" + c, function(data){		
+		// freu dich, kauf dir n dauerlutscher
+	});
+	
+	$('#mybook_'+bookid).slideUp().remove();
+};
+
+receiveBooklistJSONP = function (content)
+{
+	for (var c in content.results.id)
+	{
+		var bookid = content.results.id[c]['oreilly.com/id'].value;
+		
+		var authors = '';
+		for (var i=0; i<content.results.id[c]['oreilly.com/author-names'].value.length; i++)
+		{
+			if (authors != '') authors = authors + ', ';
+			authors = authors + content.results.id[c]['oreilly.com/author-names'].value[i];
+		}
+		
+		// figure out which skills are attached to this book
+		var skills = '';
+		for (var t in content.results.id[c])
+		{
+			if (t.search('skillshelves/skills/') != -1)
+			{
+				if (skills != '') skills = skills + ', ';
+				var level = 'Beginner';
+				if (content.results.id[c][t] >= 20) level = 'Intermediate';
+				else if (content.results.id[c][t] >= 30) level = 'Expert';
+				skills = skills + '<span title="' + level + '">' + t.substr(20) + '</span>';
+			}
+		}
+
+		$('#mybooks').append('<li id="mybook_' + bookid + '" style="background-image:url(\'' + content.results.id[c]['oreilly.com/cover-small'].value + '\'); background-position:1% center; background-repeat: no-repeat; height:' + $('#suggestion_' + bookid).height() + 'px; display:none"></li>');
+		$('#mybook_'+bookid).html('<a href="#" onclick="removeBookFromSkillshelf(\'' + c + '\', \'' + bookid + '\')">remove</a><h2>' + content.results.id[c]['oreilly.com/title'].value + '</h2>').slideDown();			
+		$('#mybook_'+bookid).append('<p>Publication year: <strong>' + content.results.id[c]['oreilly.com/publication-year'].value + '</strong></p><p>Authors: <strong>' + authors + '</strong></p>');
+		if (content.results.id[c]['oreilly.com/summary'].value)
+		{
+			$('#mybook_'+bookid).append('<p>Summary: <strong>' + content.results.id[c]['oreilly.com/summary'].value + '</strong></p>');
+		}
+		if (skills)
+		{
+			$('#mybook_'+bookid).append('<p>Skills: <strong>' + skills + '</strong></p>');
+		}
+	}	
+		
+};
+
+receiveJSONP = function(content)
+{
+	for (var c in content.results.id)
+	{
+		var bookid = content.results.id[c]['oreilly.com/id'].value;
+		
+		var authors = '';
+		for (var i=0; i<content.results.id[c]['oreilly.com/author-names'].value.length; i++)
+		{
+			if (authors != '') authors = authors + ', ';
+			authors = authors + content.results.id[c]['oreilly.com/author-names'].value[i];
+		}
+		
+		// figure out which skills are attached to this book
+		var skills = '';
+		for (var t in content.results.id[c])
+		{
+			if (t.search('skillshelves/skills/') != -1)
+			{
+				if (skills != '') skills = skills + ', ';
+				var level = 'Beginner';
+				if (content.results.id[c][t] >= 20) level = 'Intermediate';
+				else if (content.results.id[c][t] >= 30) level = 'Expert';
+				skills = skills + '<span title="' + level + '">' + t.substr(20) + '</span>';
+			}
+		}
+		
+		$('#mybook_'+bookid).prepend('<a href="#" onclick="removeBookFromSkillshelf(\'' + c + '\, \'' + bookid + '\')">remove</a>');
+		$('#mybook_'+bookid+'>p').remove();
+		$('#mybook_'+bookid).append('<p>Publication year: <strong>' + content.results.id[c]['oreilly.com/publication-year'].value + '</strong></p>')
+			.append('<p>Authors: <strong>' + authors + '</strong></p>');
+		if (content.results.id[c]['oreilly.com/summary'].value)
+		{
+			$('#mybook_'+bookid).append('<p>Summary: <strong>' + content.results.id[c]['oreilly.com/summary'].value + '</strong></p>');
+		}
+		if (skills)
+		{
+			$('#mybook_'+bookid).append('<p>Skills: <strong>' + skills + '</strong></p>');
+		}
+		
+		// add the tag to fluidinfo
+		$.get("/json/addbooktouser?o=" + c, function(data){
+			// be merry and multiply
+		});
+	}
+};
+
+selectSuggestion = function (bookid, booktitle, coverurl) {
+	$('#mybooks').prepend('<li id="mybook_' + bookid + '" style="background-image:url(\'' + coverurl + '\'); background-position:1% center; background-repeat: no-repeat; height:' + $('#suggestion_' + bookid).height() + 'px; display:none"></li>');
+	$('#mybook_' + bookid).html('<h2>' + booktitle + '</h2><p>Loading book data from Fluidinfo... </p>').slideDown();
+	$('#mybook_' + bookid).append('<script src="http://fluiddb.fluidinfo.com/values?query=oreilly.com/id+matches+%22' + bookid + '%22&tag=oreilly.com/title&tag=oreilly.com/author-names&tag=oreilly.com/publication-year&tag=oreilly.com/id&tag=oreilly.com/author-names&tag=oreilly.com/author-urls&tag=oreilly.com/summary{{ taglistasurlparams|safe }}&callback=receiveJSONP"></' + 'script>');
+};
+	
+$(document).ready(function () {
+	$('#booksearch').keyup(function(){
+		var val = $('#booksearch').val();
+		$('#suggestions').html('<div style="margin-left: 9px; width:100%; height:40px; float:none">Click on a book to add it to your skillshelf</div> ');
+		
+		var i = 0;
+		for (var bookkey in booklistjson.results.id)
+		{
+			if (booklistjson.results.id[bookkey]['oreilly.com/title'].value.toLowerCase().search(val.toLowerCase()) != -1)
+			{
+				i++;
+				$('#suggestions').append('<div><img src="' + booklistjson.results.id[bookkey]['oreilly.com/cover-small'].value + '" id="suggestion_' + booklistjson.results.id[bookkey]['oreilly.com/id'].value + '" onclick="selectSuggestion(\'' + addslashes(booklistjson.results.id[bookkey]['oreilly.com/id'].value) + '\', \'' + addslashes(booklistjson.results.id[bookkey]['oreilly.com/title'].value) + '\', \'' + addslashes(booklistjson.results.id[bookkey]['oreilly.com/cover-small'].value) + '\')" /></div>');
+			}
+			if (i > 10) break;
+		}		
+	});
+});
+</script>
+
+<h1>{{ booklisttitle }}</h1>
+
+<ul id="mybooks">
+
+</ul>
+
+<script src="http://fluiddb.fluidinfo.com/values?query=has skillshelves/user/{{username}}&tag=oreilly.com/title&tag=oreilly.com/author-names&tag=oreilly.com/publication-year&tag=oreilly.com/id&tag=oreilly.com/author-names&tag=oreilly.com/author-urls&tag=oreilly.com/cover-small&tag=oreilly.com/summary{{ taglistasurlparams|safe }}&callback=receiveBooklistJSONP"></script>
+
+<p>
+	<div style="text-align:right"><a href="/_my_skillshelf" class="uibutton">save and go to my skillshelf</a></div>
+	<span style="margin-left: 9px;">Search an O'Reilly books by typing its title below</span> 
+	<br> 
+	<input type="text" class="text" name="booksearch" id="booksearch" style="margin-left: 9px; width:45%"> 
+	<br> 
+	<br> 
+	
+</p>
+
+<div id="suggestions" class="booklist">
+</div>
+
+<br clear="all" />

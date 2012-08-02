@@ -1,0 +1,112 @@
+{% if whose_shelf %}
+	<h1>{{whose_shelf}}'s Skillshelf</h1>
+{% endif %}
+
+<div id="userpage_contents">
+	<div id="userpage_books" class="booklist">
+	</div>
+	
+	<div id="userpage_loading" class="loading">
+		<img src="/images/loading.gif" />
+		<p>Loading {{whose_shelf}}'s book list from Fluidinfo...</p>
+	</div>
+	
+	<div id="userpage_skills">
+	</div>
+</div>
+
+
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+	checkIfJSONPLoaded = function ()
+	{
+		if ($('#receivedJSONP').attr('title') != 'jo')
+		{
+			$('#userpage_loading').append('<p>This is taking longer than expected. This could either be because this user has a really huge skillshelf, or because something is technically wrong. If this error persists, please check <a href="https://twitter.com/#!/fluidinfo">Fluidinfo\'s Twitter channel</a> for status reports and/or <a href="/_feedback">send me a message</a>.</p>');
+		}
+	};
+
+	receiveJSONP = function (content)
+	{
+		$('#receivedJSONP').attr('title', 'jo');
+		$('#userpage_loading').remove();
+		$('#userpage_books').append('<p>{{whose_shelf}} has these books on his Skillshelf:</p>');
+		$('#userpage_skills').append('<p>Based on our analysis, that gives {{whose_shelf}} these skills:</p>');
+
+		var userskills = [];
+		for (var tag in skillshelves_tag_list)
+		{
+			userskills[tag] = {beginner:0, intermediate:0, expert:0};
+		}
+		
+		for (var c in content.results.id)
+		{
+			var bookid = content.results.id[c]['oreilly.com/id'].value;
+			var authors = '';
+			for (var i=0; i<content.results.id[c]['oreilly.com/author-names'].value.length; i++)
+			{
+				if (authors != '') authors = authors + ', ';
+				authors = authors + content.results.id[c]['oreilly.com/author-names'].value[i];
+			}
+			
+			// figure out which skills are attached to this book
+			var skills = '';
+			
+			for (var t in content.results.id[c])
+			{
+				if (t.search('skillshelves/skills/') != -1)
+				{
+					// 0. determine level
+					var tagname = t.substr(20);
+					var skillname = '';
+					if (skillshelves_tag_list[tagname]) skillname = skillshelves_tag_list[tagname];
+					var skillvalue = content.results.id[c][t].value;
+
+					var level = 'B';
+					if (skillvalue >= 30) level = 'E';
+					else if (skillvalue >= 20) level = 'I';
+					
+					// 1. build a string that includes all the skills
+					if (skills != '') skills = skills + ', ';
+					skills = skills + '<span>' + skillname + ' (' + level + ')</span>';
+					
+					// 2. add to the big array of user skills
+					if (userskills[tagname] != '')
+					{
+						if (skillvalue >= 30) userskills[tagname].expert++;
+						else if (skillvalue >= 20) userskills[tagname].intermediate++;
+						else userskills[tagname].beginner++; 
+					}
+				}
+			}
+			
+			if (skills == '') skills = '<em>No skills assigned yet.</em>';
+
+			// add the image
+			$('#userpage_books').append('<div><a href="/_book?b=' + content.results.id[c]['oreilly.com/id'].value + '" title="<b>' + content.results.id[c]['oreilly.com/title'].value + '</b><br />by ' + authors + '<br /><br />Skills: ' + skills + '" class="bubble"><img src="' + content.results.id[c]['oreilly.com/cover-small'].value + '" alt="' + content.results.id[c]['oreilly.com/title'].value + '" id="userpage_book_link_' + content.results.id[c]['oreilly.com/id'].value + '" class="bubble" /></a></div>');
+		}
+		
+		$('.bubble').qtip({position:'top center', style: {classes: 'ui-tooltip-shadow'}});
+		
+		var userpageskills = '';
+		userpageskills = userpageskills + '<table><tr><th class="skillname"></th><th class="skilllevel">Beginner</th><th class="skilllevel">Intermediate</th><th class="skilllevel">Expert</th></tr>';
+		
+		for (s in userskills)
+		{
+			userpageskills = userpageskills + '<tr>';
+			if (userskills[s].expert > 0) userpageskills = userpageskills + '<td class="skillname">' + skillshelves_tag_list[s] + '</td><td class="skilllevel has"><div class="has"></div></td><td class="skilllevel has"><div class="has"></div></td><td class="skilllevel has last"><div class="has last"></div></td>';
+			else if (userskills[s].intermediate > 0) userpageskills = userpageskills + '<td class="skillname">' + skillshelves_tag_list[s] + '</td><td class="skilllevel has"><div class="has"></div></td><td class="skilllevel has last"><div class="has last"></div></td><td class="skilllevel hasnot"><div class="hasnot"></div></td>';
+			else if (userskills[s].beginner > 0) userpageskills = userpageskills + '<td class="skillname">' + skillshelves_tag_list[s] + '</td><td class="skilllevel has last"><div class="has last"></div></td><td class="skilllevel hasnot"><div class="hasnot"></div></td><td class="skilllevel hasnot"><div class="hasnot"></div></td>';
+			userpageskills = userpageskills + '</tr>';
+		}
+		userpageskills = userpageskills + '</table>';
+		
+		$('#userpage_skills').append(userpageskills);
+	};		
+	
+	$('body').append('<script src="http://fluiddb.fluidinfo.com/values?query=has%20skillshelves/user/{{whose_shelf}}&tag=oreilly.com/title&tag=oreilly.com/author-names&tag=oreilly.com/cover-small&tag=oreilly.com/publication-year&tag=oreilly.com/id&tag=oreilly.com/author-names&tag=oreilly.com/author-urls&tag=oreilly.com/summary{{ taglistasurlparams|safe }}&callback=receiveJSONP" type="text/javascript"></' + 'script>');
+	setTimeout(checkIfJSONPLoaded, 10000);
+});
+</script>

@@ -1,0 +1,37 @@
+<h1>Categorize!</h1>
+<form action="" method="get">
+
+	<div>
+		{% for item in log_list %}
+		<p>{{item}}</p>
+		{% endfor %}
+	</div>
+
+	<div style="width:40%; float:right">
+		<p><input name="fluiddbkey" value="{{ fluidb_object_key }}" value="text" readonly="readonly" />	</p>
+		<input type="submit" value="store" />
+		<table>
+		{% for item in tag_list %}
+			<tr>
+				<td><input type="radio" name="{{ item }}" value="10" id="{{item}}_10" /><label for="{{item}}_10">In</label></td>
+				<td><input type="radio" name="{{ item }}" value="20" id="{{item}}_20" /><label for="{{item}}_20">Ad</label></td>
+				<td><input type="radio" name="{{ item }}" value="30" id="{{item}}_30" /><label for="{{item}}_30">Ex</label></td>
+				<td style="padding-left:30px"><strong>{{item}}</strong></td>
+			</tr>
+		{% endfor %}
+		</table>
+		<input type="submit" value="store" />
+	</div>
+
+	<div style="width:50%; float:left">
+		<p>{{ title }}</p>
+		<p>
+			<a href="{{ homepage }}">{{homepage}}</a>
+		</p>
+
+		<div>{{ description|safe }}</div>
+		
+		<div style="font-size:smaller">{{ toc|safe }}</div>
+	</div>
+	<br clear="both" />
+</form>

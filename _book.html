@@ -1,0 +1,102 @@
+<h1></h1>
+
+<div id="bookpage_contents">
+	<div id="bookpage_loading" class="loading">
+		<img src="/images/loading.gif" /> 
+		<p>Loading book details from Fluidinfo...</p>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+
+$(document).ready(function () {
+
+	suggestBetterSkills = function ()
+	{
+		$('#betterSkillsButton').hide();
+		$('#betterSkillsForm').slideDown();
+	}
+	
+	sendBetterSkills = function ()
+	{
+		$.post("/json/sendBetterSkills", { 'msg': $('#betterSkillsFormField').val(), 'book': $('#betterSkillsFormBook').val() }, function(data){
+			// woooooooooooooooooooooooohoooooooooooooooooooo, it worked!
+		});
+		$('#betterSkillsButton').replaceWith('Thanks!');
+		$('#betterSkillsForm').slideUp();
+	}
+
+	checkIfJSONPLoaded = function ()
+	{
+		if ($('#receivedJSONP').attr('title') != 'jo')
+		{
+			$('#bookpage_loading').append('<p>This is taking longer than expected. This could either be because someone is chewing on your internet line, or because something is technically wrong. If this error persists, please check <a href="https://twitter.com/#!/fluidinfo">Fluidinfo\'s Twitter channel</a> for status reports and/or <a href="/_feedback">send me a message</a>.</p>');
+		}
+	};
+
+	receiveJSONP = function (content)
+	{
+		$('#receivedJSONP').attr('title', 'jo');
+		$('#bookpage_loading').remove();
+
+		for (var c in content.results.id)
+		{
+			$('h1').html(content.results.id[c]['oreilly.com/title'].value);
+			$('#bookpage_contents').append('<img src="' + content.results.id[c]['oreilly.com/cover-medium'].value + '" class="bookimg" />');
+			$('#bookpage_contents').append('<div class="bookactions"></div>');
+			
+			var bookid = content.results.id[c]['oreilly.com/id'].value;
+			var authors = '';
+			for (var i=0; i<content.results.id[c]['oreilly.com/author-names'].value.length; i++)
+			{
+				if (authors != '') authors = authors + ', ';
+				authors = authors + content.results.id[c]['oreilly.com/author-names'].value[i];
+			}
+			
+			// figure out which skills are attached to this book
+			var skills = '';
+			for (var t in content.results.id[c])
+			{
+				if (t.search('skillshelves/skills/') != -1)
+				{
+					// 0. determine level
+					var tagname = t.substr(20);
+					var skillname = '';
+					if (skillshelves_tag_list[tagname]) skillname = skillshelves_tag_list[tagname];
+					var skillvalue = content.results.id[c][t].value;
+
+					var level = 'Expert Level';
+					if (skillvalue <= 20) level = 'Intermediate Level';
+					else if (skillvalue <= 10) level = 'Beginner Level';
+					
+					// 1. build a string that includes all the skills
+					if (skills != '') skills = skills + ', ';
+					skills = skills + '<span>' + skillname + ' (' + level + ')</span>';
+				}
+			}
+			if (skills == '') {skills = '<em>No skills assigned yet.</em>&nbsp;&nbsp;&nbsp;<a href="#" class="uibutton" onclick="suggestBetterSkills()" id="betterSkillsButton">suggest skills</a>';}
+			else {skills = skills + '&nbsp;&nbsp;&nbsp;<a href="#" class="uibutton" onclick="suggestBetterSkills()" id="betterSkillsButton">suggest better skills</a>'}
+			
+			var summary = 'A summary is not available for this book.';
+			if (content.results.id[c]['oreilly.com/summary'].value) 
+			{
+				summary = content.results.id[c]['oreilly.com/summary'].value;
+			}
+			
+			var amazon = '';
+			if (content.results.id[c]['amazon.com/url'])
+			{
+				amazon = '<p>Buy this book on Amazon.com: <a href="' + content.results.id[c]['amazon.com/url'].value + '">' + content.results.id[c]['amazon.com/url'].value + '</a></p>';
+			}
+	
+			$('#bookpage_contents').append('<div class="bookdetails"><p>Publication year: <strong>' + content.results.id[c]['oreilly.com/publication-year'].value + '</strong></p><p>Authors: <strong>' + authors + '</strong></p><p>Summary: <em>' + summary + '</em></p><p>Skills: <strong>' + skills + '</strong></p><p id="betterSkillsForm" style="display:none"><label for="betterSkillsFormField">Please leave a short message with your suggestion.</label><br /><input type="hidden" id="betterSkillsFormBook" value="' + content.results.id[c]['oreilly.com/id'].value + '" /><input type="text" id="betterSkillsFormField" />&nbsp;&nbsp;<a href="#" class="uibutton" onclick="sendBetterSkills()" id="betterSkillsButton">submit</a></p><p>Book Homepage: <a href="' + content.results.id[c]['oreilly.com/homepage'].value + '">' + content.results.id[c]['oreilly.com/homepage'].value + '</a></p>' + amazon + '<p>Fluidinfo object: <a href="http://explorer.fluidinfo.com/fluidinfo/object/' + c + '">' + c + '</a></p></div><br clear="all" />');
+
+		}	
+			
+	};
+		
+	$('body').append('<script src="http://fluiddb.fluidinfo.com/values?query=oreilly.com/id+=+%22{{ bookid }}%22&tag=oreilly.com/title&tag=oreilly.com/author-names&tag=oreilly.com/cover-medium&tag=oreilly.com/publication-year&tag=oreilly.com/homepage&tag=oreilly.com/id&tag=oreilly.com/author-names&tag=oreilly.com/author-urls&tag=oreilly.com/summary&tag=amazon.com/url{{ taglistasurlparams|safe }}&callback=receiveJSONP"></' + 'script>');
+	setTimeout(checkIfJSONPLoaded, 10000);
+});
+</script>

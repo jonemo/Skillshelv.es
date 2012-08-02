@@ -1,0 +1,42 @@
+<h1>Manage Tags!</h1>
+
+<h2>Rename</h2>
+	{% for item in tag_list %}
+	<form action="tags" method="get">
+		<input type="text" name="oldname" value="{{ item }}" readonly="readonly" />
+		<input type="text" name="newname" value="" />
+		<input type="submit" value="rename" />
+	</form>
+	{% endfor %}
+
+
+<h2>Delete</h2>
+	{% for item in tag_list %}
+	<form action="tags" method="get">
+		<input type="text" name="delete" readonly="readonly" value="{{ item }}" />
+		<input type="submit" value="delete" />
+	</form>
+	{% endfor %}
+
+
+<h2>Export</h2>
+
+<div>
+
+{% for item in tag_list2 %}
+	e = skillshelves.DBTag(tag_name="{{item.display}}", fluiddb_tag="{{item.tag}}")
+	e.put()
+{% endfor %}
+
+</div>	
+	
+<h2>Add</h2>
+	<form action="tags" method="get">
+		<input type="text" name="add" value="" />
+		<input type="submit" value="add" />
+	</form>
+
+
+{% for item in log_list %}
+<p>{{item}}</p>
+{% endfor %}

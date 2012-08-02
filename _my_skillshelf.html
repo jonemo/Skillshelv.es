@@ -1,0 +1,179 @@
+<h1>Manage Skillshelf</h1>
+
+<div id="myskillspage_loading" class="loading">
+	<img src="/images/loading.gif" /> 
+	<p>Loading your data from Fluidinfo...</p>
+</div>
+
+<table border="0">
+	<tr><td valign="top" style="width:50%; border-right: 1px solid black; padding: 5px 40px">
+		<h2>My Books</h2>
+		<div id="mybooks_box"></div>
+	</td>
+
+	<td valign="top" style="padding:5px 40px">
+		<h2>My Skills</h2>
+		<div id="myskills_box"></div>
+	</td></tr>
+	
+	<tr><td style="width:50%; border-right: 1px solid black; padding: 5px 40px">
+		<div style="text-align:right; padding-right:10px">
+			<a href="/_managebooks" class="uibutton large special">Manage my Books</a>
+		</div>	
+	</td><td>
+		<div style="text-align:right; padding-right:10px">
+			<a href="/_my-skills" class="uibutton large special">Analyze my Skills</a>
+		</div>	
+	</td></tr>
+</table>
+
+<br clear="all" />
+
+<h2>See your skillshelf</h2>
+
+<p>The public version of your skillshelf is available at <a href="http://www.skillshelv.es/{{username}}">skillshelv.es/{{username}}</a></p>
+
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+	loadSuggestions = function (skill) 
+	{
+		$.getJSON(
+		'http://fluiddb.fluidinfo.com/values?tag=oreilly.com/title&tag=oreilly.com/author-names&tag=oreilly.com/cover-small&tag=oreilly.com/publication-year&tag=oreilly.com/id&tag=oreilly.com/author-names&tag=oreilly.com/author-urls&tag=oreilly.com/summary{{ taglistasurlparams|safe }}&callback=?&query=skillshelves/skills/' + skill + '="20" or skillshelves/skills/' + skill + ' = "30"',
+		function(content) 
+		{
+			skillsectiondiv = $('#skillsectiondiv_' + skill.toLowerCase());
+			$('#skillsectionloadsuggbutton_' + skill.toLowerCase()).remove();
+
+			var booklistId = 'booklist_' + skill.toLowerCase() + '_suggested';
+			skillsectiondiv.append('<p>Suggested Reading: These books might be helpful in gaining expertise in this topic</p><div id="' + booklistId + '" class="booklist"></div><br clear="all" />');
+			
+			// count books
+			var suggcount = 0;
+			$.each(content.results.id, function(i, theBook)
+			{
+				suggcount++;
+			});
+			
+			// if we have more than eight, we get to pick which eight we show
+			var offset = 0;
+			if (suggcount > 8)
+			{
+				offeset = Math.ceil(Math.random()*(suggcount-8));
+			}
+			
+			var loopcounter = 0;
+			$.each(content.results.id, function(i, theBook)
+			{
+				loopcounter ++;
+				if (loopcounter < offset) {return true;}
+				if (loopcounter > offset+8) {return true;}
+				
+				$('#' + booklistId).append('<div><a href="/_book?b=' + theBook['oreilly.com/id'].value + '" title="<b>' + theBook['oreilly.com/title'].value + '</b><br />by ' + theBook['oreilly.com/author-names'].value.join(', ') + '" class="bubble"><img src="' + theBook['oreilly.com/cover-small'].value + '" alt="' + theBook['oreilly.com/title'].value + '" id="userpage_book_link_' + theBook['oreilly.com/id'].value + '" class="bubble" /></a></div>');
+				
+				/* we could use the following to generate a list of tags for this book, but this might be unneeded
+				$.each(theBook, function(j, tag)
+				{
+					skillsectiondiv.append('b');
+				});
+				*/
+			});
+			
+			// add the hover bubbles
+			$('#skillsectiondiv_' + skill.toLowerCase() + ' .bubble').qtip({position:'top center', style: {classes: 'ui-tooltip-shadow'}});
+		});
+
+		$('#skillsectionloadsuggbutton_' + skill.toLowerCase()).html('loading suggestions');
+	};
+	
+	checkIfJSONPLoaded = function ()
+	{
+		if ($('#receivedJSONP').attr('title') != 'jo')
+		{
+			$('#myskillspage_loading').append('<p>Loading your data is taking longer than expected. This could either be because you have a lot of books, or because something is technically wrong. If this error persists, please check <a href="https://twitter.com/#!/fluidinfo">Fluidinfo\'s Twitter channel</a> for status reports and/or <a href="/_feedback">send me a message</a>.</p>');
+		}
+	};
+
+	receiveJSONP = function (content)
+	{
+		$('#receivedJSONP').attr('title', 'jo');
+		$('#myskillspage_loading').remove();
+
+		// prefill an array with possible skills
+		var userskills = [];
+		for (var tag in skillshelves_tag_list)
+		{
+			userskills[tag] = {beginner:[], intermediate:[], expert:[]};
+		}
+	
+		// build list of tags, each with its own list of books
+		var bookcount = 0;
+		for (var c in content.results.id)
+		{
+			// figure out which skills are attached to this book
+			for (var t in content.results.id[c])
+			{
+				if (t.search('skillshelves/skills/') != -1)
+				{					
+					// 0. determine level
+					var tagname = t.substr(20);
+					if (! skillshelves_tag_list[tagname]) {continue;}
+					var skillvalue = content.results.id[c][t].value;
+
+					if (userskills[tagname] != '')
+					{
+						if (skillvalue >= 30) {
+							userskills[tagname].expert.push(c);
+						}
+						else if (skillvalue >= 20) {
+							userskills[tagname].intermediate.push(c);
+						}
+						else {
+							userskills[tagname].beginner.push(c);
+						}
+					}
+				}
+			}
+			bookcount++;
+		}
+		
+		// weed out the skills from userskills that don't have any books in them
+		var skillcount = 0;
+		for (var s in userskills)
+		{
+			if (userskills[s].beginner == 0 && userskills[s].intermediate == 0 && userskills[s].expert == 0) 
+			{
+				delete userskills[s];
+			}
+			else if (! skillshelves_tag_list[s]) 
+			{
+				delete userskills[s];
+			}
+			else
+			{
+				userskills[s].skillname = skillshelves_tag_list[s];
+				skillcount++;
+			}
+		}
+		
+		// give general stats about skills
+		$('#mybooks_box').append('<p>Your skillshelf is currently filled with <strong>' + bookcount + ' books</strong>. You can manage your books <a href="/_managebooks">here</a> or see what they look like on your public skillshelf at <a href="http://www.skillshelv.es/{{username}}">skillshelv.es/{{username}}</a>.</p>');
+		
+		var skillnames = [];
+		for (var s in userskills)
+		{
+			skillnames.push('<a href="/_my-skills#skillsection_' + s.toLowerCase() + '">' + userskills[s].skillname + '</a>');
+		}
+		
+		$('#myskills_box').append('<p>Based on your skillshelf you have some level of expertise in these <strong>' + skillcount + ' topics</strong>: ' + skillnames.join(', ') + '</p><p>You can see which book contributes to which of your skills <a href="/_my-skills">here</a>. This site will also give you suggestions on which books might be relevant to further your existing skills.</p>');
+		
+		// add the hover bubbles
+		$('.bubble').qtip({position:'top center', style: {classes: 'ui-tooltip-shadow'}});
+
+	};
+	
+	sendFluidinfoRequest ('has skillshelves/user/{{whose_shelf}}', 'receiveJSONP');
+});
+  
+</script>
